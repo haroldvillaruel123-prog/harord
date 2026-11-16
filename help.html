@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSS Inventory System</title>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial}
+body{background:#f5f5f5;color:#333}
+header{background:#ee4d2d;color:white;padding:18px 6%;
+display:flex;justify-content:space-between;align-items:center}
+header h2{font-size:23px}
+button{border:0;padding:10px 16px;border-radius:6px;
+cursor:pointer;font-weight:bold}
+.orange{background:#ee4d2d;color:white}
+.green{background:#16a34a;color:white}
+.blue{background:#2563eb;color:white}
+.gray{background:#666;color:white}
+.danger{background:#dc2626;color:white}
+input,select{padding:12px;border:1px solid #ddd;
+border-radius:6px;width:100%;margin:7px 0}
+.container{max-width:1150px;margin:25px auto;padding:15px}
+.login{max-width:400px;margin:80px auto;background:white;
+padding:30px;border-radius:12px;box-shadow:0 3px 15px #ddd}
+.login h2{text-align:center;color:#ee4d2d;margin-bottom:20px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);
+gap:15px;margin-bottom:25px}
+.stat{background:white;padding:20px;border-radius:10px;
+box-shadow:0 2px 8px #ddd}
+.stat h2{color:#ee4d2d;margin-top:10px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:15px 0}
+.toolbar input{flex:1;min-width:180px}
+.products{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px}
+.card{background:white;border-radius:10px;overflow:hidden;
+box-shadow:0 2px 8px #ddd}
+.card img{width:100%;height:160px;object-fit:cover}
+.cardbody{padding:14px}
+.cardbody h3{margin-bottom:8px}
+.cardbody p{margin:6px 0;font-size:14px}
+.actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.actions button{flex:1;font-size:12px;padding:9px 5px}
+.panel{background:white;padding:20px;border-radius:10px;
+margin-bottom:20px;box-shadow:0 2px 8px #ddd}
+.panel h3{margin-bottom:12px;color:#ee4d2d}
+.hidden{display:none!important}
+table{width:100%;border-collapse:collapse;background:white}
+th,td{padding:12px;text-align:left;border-bottom:1px solid #eee}
+th{background:#fff0ec}
+.status{color:#16a34a;font-weight:bold}
+#records{overflow-x:auto}
+@media(max-width:650px){
+.stats{grid-template-columns:repeat(2,1fr)}
+header{padding:15px;flex-wrap:wrap;gap:10px}
+.container{padding:10px}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h2>🛒 CSS INVENTORY</h2>
+<div>
+<span id="userDisplay"></span>
+<button class="gray" onclick="logout()">Logout</button>
+</div>
+</header>
+
+<!-- LOGIN -->
+<div id="loginPage" class="login">
+<h2>LOGIN ACCOUNT</h2>
+<input id="loginUser" placeholder="Email or Phone Number">
+<input id="loginPass" type="password" placeholder="Password">
+<button class="orange" style="width:100%;margin-top:10px"
+onclick="login()">LOGIN</button>
+<p style="text-align:center;margin:15px">No account yet?</p>
+<button class="blue" style="width:100%" onclick="register()">
+CREATE ACCOUNT
+</button>
+<p id="loginMsg" style="color:red;margin-top:12px"></p>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="container hidden">
+
+<div class="stats">
+<div class="stat">Total Items<h2 id="total">0</h2></div>
+<div class="stat">Available<h2 id="available">0</h2></div>
+<div class="stat">Borrowed<h2 id="borrowed">0</h2></div>
+<div class="stat">Transactions<h2 id="transactions">0</h2></div>
+</div>
+
+<div class="panel">
+<h3>➕ ADD / EDIT INVENTORY</h3>
+<input id="itemName" placeholder="Item Name">
+<input id="itemQty" type="number" min="1" placeholder="Total Quantity">
+<input id="itemImage" type="file" accept="image/*">
+<input id="imageURL" placeholder="Or paste image URL">
+<button class="orange" onclick="saveItem()">SAVE ITEM</button>
+<button class="gray" onclick="clearForm()">CLEAR</button>
+</div>
+
+<div class="toolbar">
+<input id="search" placeholder="🔍 Search items..."
+oninput="renderItems()">
+</div>
+
+<h2 style="margin-bottom:15px">📦 Inventory Products</h2>
+<div id="products" class="products"></div>
+
+<div class="panel" style="margin-top:30px">
+<h3>📋 BORROWING RECORDS</h3>
+<div id="records"></div>
+</div>
+
+</div>
+
+<script>
+let items=JSON.parse(localStorage.getItem("items")||"[]");
+let records=JSON.parse(localStorage.getItem("records")||"[]");
+let users=JSON.parse(localStorage.getItem("users")||"[]");
+let currentUser=sessionStorage.getItem("currentUser");
+let editing=null;
+let selectedImage="";
+
+function saveData(){
+localStorage.setItem("items",JSON.stringify(items));
+localStorage.setItem("records",JSON.stringify(records));
+}
+
+function login(){
+let u=document.getElementById("loginUser").value.trim();
+let p=document.getElementById("loginPass").value;
+let found=users.find(x=>x.user===u && x.pass===p);
+if(found){
+currentUser=u;
+sessionStorage.setItem("currentUser",u);
+showDashboard();
+}else{
+document.getElementById("loginMsg").innerText=
+"Incorrect email/number or password!";
+}
+}
+
+function register(){
+let u=document.getElementById("loginUser").value.trim();
+let p=document.getElementById("loginPass").value;
+if(!u||!p){alert("Enter email/number and password");return}
+if(users.some(x=>x.user===u)){
+alert("Account already exists");return;
+}
+users.push({user:u,pass:p});
+localStorage.setItem("users",JSON.stringify(users));
+alert("Account created! Please login.");
+}
+
+function logout(){
+sessionStorage.removeItem("currentUser");
+location.reload();
+}
+
+function showDashboard(){
+document.getElementById("loginPage").classList.add("hidden");
+document.getElementById("dashboard").classList.remove("hidden");
+document.getElementById("userDisplay").innerText=currentUser;
+renderItems();
+}
+
+function clearForm(){
+editing=null;
+selectedImage="";
+document.getElementById("itemName").value="";
+document.getElementById("itemQty").value="";
+document.getElementById("itemImage").value="";
+document.getElementById("imageURL").value="";
+}
+
+function saveItem(){
+let name=document.getElementById("itemName").value.trim();
+let qty=Number(document.getElementById("itemQty").value);
+let file=document.getElementById("itemImage").files[0];
+let url=document.getElementById("imageURL").value.trim();
+
+if(!name||!Number.isInteger(qty)||qty<1){
+alert("Please enter a valid item name and quantity");return;
+}
+
+function finish(image){
+if(editing!==null){
+let item=items.find(x=>x.id===editing);
+if(!item)return;
+item.name=name;
+item.qty=qty;
+if(image)item.image=image;
+}else{
+items.push({
+id:Date.now(),
+name:name,
+qty:qty,
+image:image||"https://placehold.co/400x300?text=No+Image"
+});
+}
+saveData();
+clearForm();
+renderItems();
+}
+
+if(file){
+if(file.size>1500000){
+alert("Image is too large. Please use an image under 1.5MB.");
+return;
+}
+let reader=new FileReader();
+reader.onload=e=>finish(e.target.result);
+reader.readAsDataURL(file);
+}else{
+finish(url||selectedImage);
+}
+}
+
+function editItem(id){
+let x=items.find(i=>i.id===id);
+editing=id;
+selectedImage=x.image;
+document.getElementById("itemName").value=x.name;
+document.getElementById("itemQty").value=x.qty;
+document.getElementById("imageURL").value="";
+window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function deleteItem(id){
+if(!confirm("Delete this item?"))return;
+if(records.some(r=>r.itemId===id && r.status==="Borrowed")){
+alert("Cannot delete an item with an active borrowing record.");
+return;
+}
+items=items.filter(x=>x.id!==id);
+saveData();
+renderItems();
+}
+
+function borrowItem(id){
+let x=items.find(i=>i.id===id);
+if(!x||x.qty<=0){alert("No available stock!");return}
+let name=prompt("Enter name of borrower:");
+if(!name||!name.trim())return;
+let qty=Number(prompt("How many pieces?","1"));
+if(!Number.isInteger(qty)||qty<1||qty>x.qty){
+alert("Invalid quantity!");return;
+}
+x.qty-=qty;
+records.push({
+id:Date.now(),
+itemId:id,
+item:x.name,
+borrower:name.trim(),
+qty:qty,
+date:new Date().toLocaleString(),
+status:"Borrowed"
+});
+saveData();
+renderItems();
+}
+
+function returnItem(id){
+let r=records.find(x=>x.id===id);
+if(!r||r.status!=="Borrowed")return;
+if(!confirm("Confirm return of "+r.item+"?"))return;
+let item=items.find(x=>x.id===r.itemId);
+if(item)item.qty+=r.qty;
+r.status="Returned";
+r.returnDate=new Date().toLocaleString();
+saveData();
+renderItems();
+}
+
+function renderItems(){
+let q=document.getElementById("search").value.toLowerCase();
+let list=document.getElementById("products");
+list.innerHTML="";
+
+items.filter(x=>x.name.toLowerCase().includes(q))
+.forEach(x=>{
+let borrowedQty=records
+.filter(r=>r.itemId===x.id&&r.status==="Borrowed")
+.reduce((sum,r)=>sum+r.qty,0);
+
+list.innerHTML+=`
+<div class="card">
+<img src="${x.image}" alt="Item"
+onerror="this.src='https://placehold.co/400x300?text=No+Image'">
+<div class="cardbody">
+<h3>${escapeHTML(x.name)}</h3>
+<p>Available: <b>${x.qty}</b></p>
+<p>Borrowed: <b>${borrowedQty}</b></p>
+<div class="actions">
+<button class="green" onclick="borrowItem(${x.id})">BORROW</button>
+<button class="blue" onclick="editItem(${x.id})">EDIT</button>
+<button class="danger" onclick="deleteItem(${x.id})">DELETE</button>
+</div>
+</div>
+</div>`;
+});
+
+document.getElementById("total").innerText=
+items.reduce((s,x)=>s+x.qty+records
+.filter(r=>r.itemId===x.id&&r.status==="Borrowed")
+.reduce((a,r)=>a+r.qty,0),0);
+
+document.getElementById("available").innerText=
+items.reduce((s,x)=>s+x.qty,0);
+
+document.getElementById("borrowed").innerText=
+records.filter(r=>r.status==="Borrowed")
+.reduce((s,r)=>s+r.qty,0);
+
+document.getElementById("transactions").innerText=records.length;
+
+let html=`<table><tr>
+<th>Item</th><th>Borrower</th><th>Qty</th>
+<th>Date Borrowed</th><th>Status</th><th>Action</th>
+</tr>`;
+
+records.slice().reverse().forEach(r=>{
+html+=`<tr>
+<td>${escapeHTML(r.item)}</td>
+<td>${escapeHTML(r.borrower)}</td>
+<td>${r.qty}</td>
+<td>${escapeHTML(r.date)}</td>
+<td class="status">${r.status}</td>
+<td>${r.status==="Borrowed"?
+`<button class="green" onclick="returnItem(${r.id})">RETURN</button>`:
+"Completed"}
+</td></tr>`;
+});
+
+html+="</table>";
+document.getElementById("records").innerHTML=html;
+}
+
+function escapeHTML(value){
+return String(value).replace(/[&<>"']/g,c=>({
+"&":"&amp;","<":"&lt;",">":"&gt;",
+'"':"&quot;","'":"&#39;"
+}[c]));
+}
+
+if(currentUser&&users.some(x=>x.user===currentUser)){
+showDashboard();
+}
+</script>
+
+</body>
+</html>
+
+</body>
+</html>
